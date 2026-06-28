@@ -733,6 +733,185 @@ window.addEventListener('DOMContentLoaded', () => {
     handleRouting();
     renderGallery();
     updateNavAdminButton();
+    initBubbleCanvas();
 });
 
 window.addEventListener('hashchange', handleRouting);
+
+/* ==========================================
+   INTERACTIVE CANVAS BUBBLE BACKGROUND
+   ========================================== */
+function initBubbleCanvas() {
+    const canvas = document.getElementById('bubble-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+    
+    // Resize handler
+    window.addEventListener('resize', () => {
+        width = (canvas.width = window.innerWidth);
+        height = (canvas.height = window.innerHeight);
+    });
+    
+    // Mouse coordinates
+    const mouse = {
+        x: null,
+        y: null,
+        radius: 120, // Interaction radius
+        active: false
+    };
+    
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        mouse.active = true;
+        
+        // Spawn small cursor trails (bubbles) occasionally
+        if (Math.random() < 0.25) {
+            trailParticles.push(new TrailParticle(mouse.x, mouse.y));
+        }
+    });
+    
+    window.addEventListener('mouseleave', () => {
+        mouse.x = null;
+        mouse.y = null;
+        mouse.active = false;
+    });
+    
+    const bubbles = [];
+    const trailParticles = [];
+    
+    // Palette matching saffron, gold, and purple with transparency
+    const colors = [
+        'rgba(224, 83, 0, ',   // Saffron
+        'rgba(191, 160, 67, ',  // Gold
+        'rgba(157, 78, 221, ',  // Neon Purple
+        'rgba(0, 210, 255, '   // Neon Blue/Cyan
+    ];
+    
+    class Bubble {
+        constructor() {
+            this.reset();
+            // Start at random Y so they don't all rise from bottom initially
+            this.y = Math.random() * height;
+        }
+        
+        reset() {
+            this.radius = Math.random() * 5 + 2; // Radius between 2px and 7px
+            this.x = Math.random() * width;
+            this.y = height + this.radius + Math.random() * 100;
+            this.baseSpeedY = -(Math.random() * 0.5 + 0.2); // Slowly floating up
+            this.speedY = this.baseSpeedY;
+            this.speedX = Math.random() * 0.4 - 0.2;
+            this.colorOpacity = Math.random() * 0.15 + 0.1; // Opacity 0.1 to 0.25
+            this.colorBase = colors[Math.floor(Math.random() * colors.length)];
+            
+            // For repelling movement
+            this.vx = 0;
+            this.vy = 0;
+            this.friction = 0.95;
+        }
+        
+        update() {
+            // Apply repulsion force if mouse is active and close
+            if (mouse.active && mouse.x !== null) {
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < mouse.radius) {
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    // Force vector pointing away from mouse
+                    const forceX = (dx / distance) * force * 1.5;
+                    const forceY = (dy / distance) * force * 1.5;
+                    
+                    this.vx += forceX;
+                    this.vy += forceY;
+                }
+            }
+            
+            // Apply velocity from force
+            this.x += this.speedX + this.vx;
+            this.y += this.speedY + this.vy;
+            
+            // Friction/Decay on force velocity
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+            
+            // Wrap X coordinates
+            if (this.x < -this.radius) this.x = width + this.radius;
+            if (this.x > width + this.radius) this.x = -this.radius;
+            
+            // Reset if goes off top
+            if (this.y < -this.radius) {
+                this.reset();
+            }
+        }
+        
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.colorBase + this.colorOpacity + ')';
+            ctx.fill();
+        }
+    }
+    
+    class TrailParticle {
+        constructor(x, y) {
+            this.x = x + (Math.random() * 10 - 5);
+            this.y = y + (Math.random() * 10 - 5);
+            this.radius = Math.random() * 3 + 1;
+            this.speedX = Math.random() * 0.8 - 0.4;
+            this.speedY = Math.random() * 0.8 - 0.4;
+            this.colorBase = colors[Math.floor(Math.random() * colors.length)];
+            this.opacity = 0.5;
+            this.decay = Math.random() * 0.02 + 0.015;
+        }
+        
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            this.opacity -= this.decay;
+        }
+        
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.colorBase + this.opacity + ')';
+            ctx.fill();
+        }
+    }
+    
+    // Populate bubbles
+    const bubbleCount = Math.min(65, Math.floor((width * height) / 18000));
+    for (let i = 0; i < bubbleCount; i++) {
+        bubbles.push(new Bubble());
+    }
+    
+    // Animation Loop
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        
+        // Update & Draw Bubbles
+        for (let i = 0; i < bubbles.length; i++) {
+            bubbles[i].update();
+            bubbles[i].draw();
+        }
+        
+        // Update & Draw Trail Particles
+        for (let i = trailParticles.length - 1; i >= 0; i--) {
+            trailParticles[i].update();
+            if (trailParticles[i].opacity <= 0) {
+                trailParticles.splice(i, 1);
+            } else {
+                trailParticles[i].draw();
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+}

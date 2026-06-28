@@ -3,11 +3,14 @@
    ========================================== */
 :root {
     /* Color Palette */
-    --bg-main: #0c0d0f;
-    --bg-surface: #141619;
-    --bg-surface-elevated: #1a1d21;
-    --bg-glass: rgba(20, 22, 25, 0.75);
-    --border-glass: rgba(255, 255, 255, 0.05);
+    --bg-main: #030012;
+    --bg-surface: #0a081e;
+    --bg-surface-elevated: #110d2c;
+    --bg-glass: rgba(10, 8, 30, 0.65);
+    --border-glass: rgba(255, 255, 255, 0.04);
+    --neon-blue: #00d2ff;
+    --neon-purple: #9d4edd;
+    --neon-cyan: #06b6d4;
     
     --saffron-primary: #e05300;
     --saffron-light: #ff7324;
@@ -115,33 +118,67 @@ body {
     background: var(--saffron-primary);
 }
 
-/* Ambient Background Glows (Subtle, Non-Disturbing) */
+/* Canvas background for interactive bubbles */
+#bubble-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -5;
+    pointer-events: none;
+    background: transparent;
+}
+
+/* Ambient Background Glows (Premium pulsing spheres) */
 .bg-glow {
     position: fixed;
-    width: 450px;
-    height: 450px;
     border-radius: var(--radius-full);
     filter: blur(140px);
-    z-index: -1;
+    z-index: -10;
     pointer-events: none;
-    opacity: 0.08;
+    opacity: 0.15;
     transition: opacity var(--transition-normal);
+    animation: pulse-slow 8s infinite alternate ease-in-out;
 }
 
 .bg-glow-1 {
-    top: -100px;
-    left: -100px;
-    background: var(--saffron-primary);
+    top: -15%;
+    left: -15%;
+    width: 60vw;
+    height: 60vw;
+    background: radial-gradient(circle, var(--saffron-glow) 0%, transparent 70%);
 }
 
 .bg-glow-2 {
-    bottom: -100px;
-    right: -100px;
-    background: var(--gold-primary);
+    bottom: -20%;
+    right: -10%;
+    width: 65vw;
+    height: 65vw;
+    background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+}
+
+.bg-glow-3 {
+    top: 30%;
+    right: 5%;
+    width: 40vw;
+    height: 40vw;
+    background: radial-gradient(circle, rgba(157, 78, 221, 0.1) 0%, transparent 70%);
 }
 
 body.light-theme .bg-glow {
-    opacity: 0.04;
+    opacity: 0.05;
+}
+
+@keyframes pulse-slow {
+    0% {
+        transform: scale(0.96) translate(0px, 0px);
+        opacity: 0.12;
+    }
+    100% {
+        transform: scale(1.04) translate(10px, -15px);
+        opacity: 0.18;
+    }
 }
 
 /* Typography Utilities */
@@ -267,7 +304,7 @@ body.light-theme .badge {
 }
 
 .nav-container {
-    max-width: 1100px;
+    max-width: 1280px;
     height: 100%;
     margin: 0 auto;
     padding: 0 1.5rem;
@@ -424,7 +461,7 @@ body.light-theme .theme-toggle-btn:hover {
 }
 
 .section {
-    max-width: 1100px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 4.5rem 1.5rem;
     display: none;
@@ -719,15 +756,17 @@ body.light-theme .hero-image-frame::after {
 
 /* Photo Card */
 .photo-card {
-    background: var(--bg-surface);
+    background: var(--bg-glass);
     border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     transition: all var(--transition-normal);
     position: relative;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .photo-card-img-wrap {
@@ -902,15 +941,20 @@ body.light-theme .photo-card-desc[contenteditable="true"]:hover {
 }
 
 .about-card {
-    background: var(--bg-surface);
+    background: var(--bg-glass);
     border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 2rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: all var(--transition-normal);
 }
 
 .about-card:hover {
-    border-color: rgba(191, 160, 67, 0.15);
+    border-color: rgba(224, 83, 0, 0.25);
+    box-shadow: 0 8px 30px rgba(224, 83, 0, 0.12), var(--shadow-saffron);
+    transform: translateY(-2px);
 }
 
 .profile-card {
@@ -1256,11 +1300,20 @@ body.light-theme .tribute-quote {
 }
 
 .contact-form-card {
-    background: var(--bg-surface);
+    background: var(--bg-glass);
     border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 2rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: all var(--transition-normal);
+}
+
+.contact-form-card:hover {
+    border-color: rgba(224, 83, 0, 0.25);
+    box-shadow: 0 8px 30px rgba(224, 83, 0, 0.12), var(--shadow-saffron);
+    transform: translateY(-2px);
 }
 
 .contact-form {
@@ -1550,7 +1603,7 @@ body.light-theme .footer {
 }
 
 .footer-container {
-    max-width: 1100px;
+    max-width: 1280px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
