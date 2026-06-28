@@ -39,14 +39,76 @@ const INITIAL_PHOTOS = [
     }
 ];
 
-// Initialize LocalStorage for Photos
+// Initialize Database and Storage (IndexedDB for Infinite Capacity)
+const DB_NAME = 'vivek_portfolio_db';
+const DB_VERSION = 1;
+const STORE_NAME = 'photos_store';
+let db;
+
+function initDB(callback) {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+    };
+    request.onsuccess = (e) => {
+        db = e.target.result;
+        if (callback) callback();
+    };
+    request.onerror = (e) => {
+        console.error("IndexedDB failed to open, using localStorage fallback", e);
+        if (callback) callback();
+    };
+}
+
 let photos = [];
-function initPhotosStorage() {
+
+function initPhotosStorage(callback) {
+    if (db) {
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get('all_photos');
+            
+            request.onsuccess = (e) => {
+                const result = e.target.result;
+                if (result && result.data) {
+                    photos = result.data;
+                    // Auto-migration for paths
+                    let migrated = false;
+                    photos = photos.map(photo => {
+                        if (photo.src && photo.src.startsWith('assets/images/')) {
+                            photo.src = photo.src.replace('assets/images/', '');
+                            migrated = true;
+                        }
+                        return photo;
+                    });
+                    if (migrated) {
+                        savePhotosToStorage();
+                    }
+                    if (callback) callback();
+                } else {
+                    loadFromLocalStorageFallback(callback);
+                }
+            };
+            request.onerror = () => {
+                loadFromLocalStorageFallback(callback);
+            };
+        } catch (err) {
+            loadFromLocalStorageFallback(callback);
+        }
+    } else {
+        loadFromLocalStorageFallback(callback);
+    }
+}
+
+function loadFromLocalStorageFallback(callback) {
     const stored = localStorage.getItem('vivek_portfolio_photos');
     if (stored) {
         try {
             photos = JSON.parse(stored);
-            // Auto-migration: if any photo uses the old assets/images path, clean it up
             let migrated = false;
             photos = photos.map(photo => {
                 if (photo.src && photo.src.startsWith('assets/images/')) {
@@ -55,11 +117,8 @@ function initPhotosStorage() {
                 }
                 return photo;
             });
-            if (migrated) {
-                savePhotosToStorage();
-            }
+            savePhotosToStorage(); // migrate to DB
         } catch (e) {
-            console.error("Failed to parse stored photos, resetting to defaults", e);
             photos = [...INITIAL_PHOTOS];
             savePhotosToStorage();
         }
@@ -67,10 +126,22 @@ function initPhotosStorage() {
         photos = [...INITIAL_PHOTOS];
         savePhotosToStorage();
     }
+    if (callback) callback();
 }
 
 function savePhotosToStorage() {
-    localStorage.setItem('vivek_portfolio_photos', JSON.stringify(photos));
+    if (db) {
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            store.put({ id: 'all_photos', data: photos });
+        } catch (e) {
+            console.error("Failed to write to IndexedDB, falling back to localStorage", e);
+            localStorage.setItem('vivek_portfolio_photos', JSON.stringify(photos));
+        }
+    } else {
+        localStorage.setItem('vivek_portfolio_photos', JSON.stringify(photos));
+    }
 }
 
 /* ==========================================
@@ -499,8 +570,8 @@ function handleImageFile(file) {
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
+            const MAX_WIDTH = 1000;
+            const MAX_HEIGHT = 1000;
             let width = img.width;
             let height = img.height;
             
@@ -524,7 +595,7 @@ function handleImageFile(file) {
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, width, height);
             
-            uploadedImageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+            uploadedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
             if (uploadPreview) {
                 uploadPreview.src = uploadedImageBase64;
                 uploadPreview.style.display = 'block';
@@ -728,12 +799,17 @@ if (navAdminBtn) {
    INITIALIZATION
    ========================================== */
 window.addEventListener('DOMContentLoaded', () => {
-    initPhotosStorage();
     initTheme();
     handleRouting();
-    renderGallery();
-    updateNavAdminButton();
     initBubbleCanvas();
+    
+    // Initialize DB, then load photos and render gallery
+    initDB(() => {
+        initPhotosStorage(() => {
+            renderGallery();
+            updateNavAdminButton();
+        });
+    });
 });
 
 window.addEventListener('hashchange', handleRouting);
@@ -759,7 +835,7 @@ function initBubbleCanvas() {
     const mouse = {
         x: null,
         y: null,
-        radius: 120, // Interaction radius
+        radius: 150, // Slightly larger interaction radius
         active: false
     };
     
@@ -769,7 +845,7 @@ function initBubbleCanvas() {
         mouse.active = true;
         
         // Spawn small cursor trails (bubbles) occasionally
-        if (Math.random() < 0.25) {
+        if (Math.random() < 0.35) {
             trailParticles.push(new TrailParticle(mouse.x, mouse.y));
         }
     });
@@ -799,13 +875,16 @@ function initBubbleCanvas() {
         }
         
         reset() {
-            this.radius = Math.random() * 5 + 2; // Radius between 2px and 7px
+            // Larger bubbles: radius between 8px and 28px
+            this.radius = Math.random() * 20 + 8;
             this.x = Math.random() * width;
             this.y = height + this.radius + Math.random() * 100;
-            this.baseSpeedY = -(Math.random() * 0.5 + 0.2); // Slowly floating up
+            this.baseSpeedY = -(Math.random() * 0.4 + 0.15); // Slowly floating up
             this.speedY = this.baseSpeedY;
             this.speedX = Math.random() * 0.4 - 0.2;
-            this.colorOpacity = Math.random() * 0.15 + 0.1; // Opacity 0.1 to 0.25
+            
+            // Large bubbles are very faint and soft, like blurred lights (bokeh)
+            this.colorOpacity = (1 - (this.radius / 32)) * 0.12 + 0.03;
             this.colorBase = colors[Math.floor(Math.random() * colors.length)];
             
             // For repelling movement
@@ -821,11 +900,14 @@ function initBubbleCanvas() {
                 const dy = this.y - mouse.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance < mouse.radius) {
-                    const force = (mouse.radius - distance) / mouse.radius;
+                // Repel radius depends on bubble size
+                const repelRadius = mouse.radius + this.radius * 0.5;
+                
+                if (distance < repelRadius) {
+                    const force = (repelRadius - distance) / repelRadius;
                     // Force vector pointing away from mouse
-                    const forceX = (dx / distance) * force * 1.5;
-                    const forceY = (dy / distance) * force * 1.5;
+                    const forceX = (dx / distance) * force * 2.0;
+                    const forceY = (dy / distance) * force * 2.0;
                     
                     this.vx += forceX;
                     this.vy += forceY;
@@ -860,14 +942,19 @@ function initBubbleCanvas() {
     
     class TrailParticle {
         constructor(x, y) {
-            this.x = x + (Math.random() * 10 - 5);
-            this.y = y + (Math.random() * 10 - 5);
-            this.radius = Math.random() * 3 + 1;
-            this.speedX = Math.random() * 0.8 - 0.4;
-            this.speedY = Math.random() * 0.8 - 0.4;
+            this.x = x + (Math.random() * 14 - 7);
+            this.y = y + (Math.random() * 14 - 7);
+            
+            // Larger cursor trail bubbles (3px to 10px)
+            this.radius = Math.random() * 7 + 3;
+            
+            // Gentle float-up and drift behavior
+            this.speedX = Math.random() * 0.6 - 0.3;
+            this.speedY = -(Math.random() * 0.5 + 0.2);
+            
             this.colorBase = colors[Math.floor(Math.random() * colors.length)];
-            this.opacity = 0.5;
-            this.decay = Math.random() * 0.02 + 0.015;
+            this.opacity = 0.45;
+            this.decay = Math.random() * 0.015 + 0.012; // Slow fade out
         }
         
         update() {
@@ -884,8 +971,8 @@ function initBubbleCanvas() {
         }
     }
     
-    // Populate bubbles
-    const bubbleCount = Math.min(65, Math.floor((width * height) / 18000));
+    // Populate bubbles (fewer bubbles on screen because they are larger now, preventing clutter)
+    const bubbleCount = Math.min(45, Math.floor((width * height) / 25000));
     for (let i = 0; i < bubbleCount; i++) {
         bubbles.push(new Bubble());
     }

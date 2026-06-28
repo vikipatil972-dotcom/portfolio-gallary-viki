@@ -510,13 +510,17 @@ body.light-theme .theme-toggle-btn:hover {
 /* ==========================================
    HOME (HERO) SECTION - MINIMALIST
    ========================================== */
+#home.section {
+    padding-top: 3rem;
+}
+
 .hero-container {
     display: grid;
     grid-template-columns: 1.2fr 0.8fr;
     gap: 3rem;
     align-items: center;
-    padding-top: 2rem;
-    min-height: calc(100vh - 150px);
+    padding-top: 0.25rem;
+    min-height: calc(100vh - 180px);
 }
 
 .hero-text-side {
@@ -559,7 +563,7 @@ body.light-theme .theme-toggle-btn:hover {
     border-left: 3px solid var(--saffron-primary);
     padding: 1.5rem 1.8rem;
     border-radius: 4px;
-    margin-bottom: 2.25rem;
+    margin-bottom: 1.5rem;
     max-width: 600px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     border-top: 1px solid rgba(255, 255, 255, 0.02);
