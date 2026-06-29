@@ -298,8 +298,15 @@ if (mobileMenuBtn) {
 
 navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
+        e.preventDefault();
         const targetSection = link.getAttribute('data-section');
-        window.location.hash = targetSection;
+        
+        if (history.pushState) {
+            history.pushState(null, null, '#' + targetSection);
+            navigateToSection(targetSection);
+        } else {
+            window.location.hash = targetSection;
+        }
         
         if (navLinksContainer) {
             navLinksContainer.classList.remove('active-menu');

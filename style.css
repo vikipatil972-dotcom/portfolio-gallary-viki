@@ -511,7 +511,8 @@ body.light-theme .theme-toggle-btn:hover {
    HOME (HERO) SECTION - MINIMALIST
    ========================================== */
 #home.section {
-    padding-top: 3rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
 }
 
 .hero-container {
@@ -520,7 +521,7 @@ body.light-theme .theme-toggle-btn:hover {
     gap: 3rem;
     align-items: center;
     padding-top: 0.25rem;
-    min-height: calc(100vh - 180px);
+    min-height: calc(100vh - 95px);
 }
 
 .hero-text-side {
@@ -561,7 +562,7 @@ body.light-theme .theme-toggle-btn:hover {
 .hero-bio-card {
     background: rgba(20, 22, 25, 0.45);
     border-left: 3px solid var(--saffron-primary);
-    padding: 1.5rem 1.8rem;
+    padding: 1rem 1.5rem;
     border-radius: 4px;
     margin-bottom: 1.5rem;
     max-width: 600px;
@@ -587,7 +588,7 @@ body.light-theme .hero-bio-card {
     font-size: 1.02rem;
     color: var(--text-secondary);
     line-height: 1.75;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.5rem;
 }
 
 .hero-bio-card p:last-child {
