@@ -519,8 +519,8 @@ body.light-theme .theme-toggle-btn:hover {
     display: grid;
     grid-template-columns: 1.2fr 0.8fr;
     gap: 3rem;
-    align-items: center;
-    padding-top: 0.25rem;
+    align-items: flex-start;
+    padding-top: 2rem;
     min-height: calc(100vh - 95px);
 }
 
